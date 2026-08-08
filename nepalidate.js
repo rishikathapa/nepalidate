@@ -1,110 +1,44 @@
-/**
- * Blogger Toolbox - Accurate English to Nepali Date Converter
- * Using standard Bikram Sambat mapping (nepali-date-converter logic)
- */
+<!-- Nepali Date Converter Code -->
+<script src='https://cdn.jsdelivr.net/npm/nepali-date-converter/dist/nepali-date-converter.umd.js' type='text/javascript'></script>
 
-// १. महिना र गतेको डाटा नक्सांकन (२००० BS देखि २०९० BS सम्मको वास्तविक डाटा)
-const dateConfigMap = {
-    '2080': { Baisakh: 31, Jestha: 32, Asar: 31, Shrawan: 32, Bhadra: 31, Aswin: 30, Kartik: 30, Mangsir: 30, Poush: 29, Magh: 29, Falgun: 30, Chaitra: 30 },
-    '2081': { Baisakh: 31, Jestha: 32, Asar: 31, Shrawan: 32, Bhadra: 31, Aswin: 30, Kartik: 30, Mangsir: 30, Poush: 29, Magh: 30, Falgun: 29, Chaitra: 31 },
-    '2082': { Baisakh: 31, Jestha: 31, Asar: 32, Shrawan: 31, Bhadra: 31, Aswin: 31, Kartik: 30, Mangsir: 29, Poush: 30, Magh: 29, Falgun: 30, Chaitra: 30 },
-    '2083': { Baisakh: 31, Jestha: 31, Asar: 32, Shrawan: 31, Bhadra: 31, Aswin: 31, Kartik: 30, Mangsir: 29, Poush: 30, Magh: 29, Falgun: 30, Chaitra: 30 },
-    '2084': { Baisakh: 31, Jestha: 32, Asar: 31, Shrawan: 32, Bhadra: 31, Aswin: 30, Kartik: 30, Mangsir: 30, Poush: 29, Magh: 29, Falgun: 30, Chaitra: 31 },
-    '2085': { Baisakh: 30, Jestha: 32, Asar: 31, Shrawan: 32, Bhadra: 31, Aswin: 30, Kartik: 30, Mangsir: 30, Poush: 29, Magh: 30, Falgun: 29, Chaitra: 31 }
-};
+<script type='text/javascript'>
+  //<![CDATA[
+  document.addEventListener("DOMContentLoaded", function() {
+    let dateElements = document.querySelectorAll('.location-date, .post-date, .published');
 
-const BloggerDateTool = {
-    config: {
-        numMap: {'0':'०','1':'१','2':'२','3':'३','4':'४','5':'५','6':'६','7':'७','8':'८','9':'९'},
-        weekdays: ['आइतबार', 'सोमबार', 'मंगलबार', 'बुधबार', 'बिहीबार', 'शुक्रबार', 'शनिबार'],
-        nepaliMonths: [
-            'बैशाख', 'जेठ', 'असार', 'श्रावण', 'भाद्र', 'आश्विन',
-            'कार्तिक', 'मंसिर', 'पौष', 'माघ', 'फाल्गुण', 'चैत्र'
-        ],
-        // सन् १९४३ अप्रिल १३ AD = २००० वैशाख १ BS (एपोक आधार)
-        epochAD: new Date(Date.UTC(1943, 3, 13))
-    },
+    dateElements.forEach(function(el) {
+      // "2026-08-08" वा "August 8, 2026" लाई Parse गर्ने
+      let rawText = el.innerText.trim();
+      let cleanText = rawText.replace(/[^\w\s,-]/gi, '').trim();
+      let parsedDate = new Date(cleanText);
 
-    // अङ्कलाई नेपालीमा रूपान्तरण गर्ने
-    toNep: function(n) {
-        if (n === undefined || n === null) return '';
-        return n.toString().split('').map(c => this.config.numMap[c] || c).join('');
-    },
+      if (!isNaN(parsedDate.getTime())) {
+        try {
+          let bsDate = new NepaliDate(parsedDate);
+          
+          let nepaliDigits = ['०', '१', '२', '३', '४', '५', '६', '७', '८', '९'];
+          let nepaliMonths = ['वैशाख', 'जेठ', 'असार', 'साउन', 'भदौ', 'असोज', 'कात्तिक', 'मंसिर', 'पुस', 'माघ', 'फागुन', 'चैत'];
+          let nepaliDays = ['आइतबार', 'सोमबार', 'मंगलबार', 'बुधबार', 'बिहीबार', 'शुक्रबार', 'शनिबार'];
 
-    // AD मितिबाट कुल बितेका दिनहरू (Passed Days) निकाल्ने
-    getPassedDaysAD: function(adDate) {
-        const timeDiff = Date.UTC(adDate.getFullYear(), adDate.getMonth(), adDate.getDate()) - this.config.epochAD.getTime();
-        return Math.floor(timeDiff / (1000 * 3600 * 24)) + 1;
-    },
+          let toNepDigits = function(num) {
+            return num.toString().split('').map(d => nepaliDigits[d] || d).join('');
+          };
 
-    // कुल दिनबाट BS (नेपाली मिति) पत्ता लगाउने
-    convertADToBS: function(adDate) {
-        let daysPassed = this.getPassedDaysAD(adDate);
-        let currentYear = 2000;
+          let year = toNepDigits(bsDate.getYear());
+          let month = nepaliMonths[bsDate.getMonth()];
+          let day = toNepDigits(bsDate.getDate());
+          let dayOfWeek = nepaliDays[parsedDate.getDay()];
 
-        // BS वर्ष र महिनाको गणना
-        while (currentYear <= 2090) {
-            const yearData = dateConfigMap[currentYear.toString()];
-            if (!yearData) {
-                // यदि वर्षको नक्शा उपलब्ध छैन भने औसत ३६५ दिन प्रयोग गर्ने
-                if (daysPassed <= 365) break;
-                daysPassed -= 365;
-                currentYear++;
-                continue;
-            }
+          let icon = el.querySelector('i');
+          let iconHTML = icon ? icon.outerHTML + ' ' : '<i class="fa-regular fa-calendar-days"></i> ';
 
-            const monthLengths = Object.values(yearData);
-            const totalDaysInYear = monthLengths.reduce((acc, d) => acc + d, 0);
-
-            if (daysPassed <= totalDaysInYear) {
-                for (let mIndex = 0; mIndex < monthLengths.length; mIndex++) {
-                    const daysInMonth = monthLengths[mIndex];
-                    if (daysPassed <= daysInMonth) {
-                        return {
-                            year: currentYear,
-                            month: this.config.nepaliMonths[mIndex],
-                            day: daysPassed,
-                            dayOfWeek: this.config.weekdays[adDate.getDay()]
-                        };
-                    }
-                    daysPassed -= daysInMonth;
-                }
-            }
-            daysPassed -= totalDaysInYear;
-            currentYear++;
+          // आउटपुट: शनिवार, २३ साउन २०८३
+          el.innerHTML = `${iconHTML}${dayOfWeek}, ${day} ${month} ${year}`;
+        } catch (e) {
+          console.error("Date conversion failed:", e);
         }
-
-        return null;
-    },
-
-    // ब्लगरका पोस्टका मितिहरू रूपान्तरण गर्ने मुख्य फङ्सन
-    convertDates: function(elements) {
-        elements.forEach(el => {
-            const text = el.innerText.trim();
-            if (!text) return;
-
-            // अंग्रेजी मिति Parse गर्ने (उदा: "August 4, 2026" वा "04 August 2026")
-            const parsedDate = new Date(text);
-            if (isNaN(parsedDate.getTime())) return; // मिति सही नभए छाडिदिने
-
-            const bsData = this.convertADToBS(parsedDate);
-            if (bsData) {
-                // ढाँचा: "सोमबार, साउन १९, २०८३"
-                el.innerText = `${bsData.dayOfWeek}, ${bsData.month} ${this.toNep(bsData.day)}, ${this.toNep(bsData.year)}`;
-            }
-        });
-    },
-
-    // इनिसिएलाइजेसन फङ्सन (.location-date र अन्य ब्लगर क्लासहरू)
-    initDateTool: function() {
-        const elements = document.querySelectorAll(".location-date, .post-date, span.post-timestamp, span.date-header");
-        if (elements.length > 0) {
-            this.convertDates(elements);
-        }
-    }
-};
-
-// पेज लोड भएपछि फङ्सन रन गर्ने
-window.addEventListener('DOMContentLoaded', () => {
-    BloggerDateTool.initDateTool();
-});
+      }
+    });
+  });
+  //]]>
+</script>
